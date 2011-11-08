@@ -80,6 +80,7 @@ package de.nulldesign.nd2d.display {
 		protected var bounds:Rectangle;
 		protected var lastFramesTime:Number = 0.0;
 		protected var enableErrorChecking:Boolean = false;
+		protected var _locked:Boolean = false;
 
 		protected var renderMode:String;
 		protected var mousePosition:Vector3D = new Vector3D(0.0, 0.0, 0.0);
@@ -218,6 +219,29 @@ package de.nulldesign.nd2d.display {
 
 			lastFramesTime = t;
 		}
+		
+		public function clear(br:Number = 0, bg:Number = 0, bb:Number = 0, alpha:Number = 1):void {
+			if(context3D){
+				context3D.clear(br,bg,bb,alpha);
+				if(!locked)
+					context3D.present();
+				
+				statsObject.totalDrawCalls = 0;
+				statsObject.totalTris = 0;
+			}
+			
+		}
+		
+		public function blit(blittable:IBlittable):void {
+			if(context3D) {								
+				if(deviceWasLost)
+					blittable.node.handleDeviceLoss();
+				blittable.node.drawNode(context3D, camera, false, statsObject);
+				
+				if(!locked)
+					context3D.present();
+			}
+		}
 
 		public function setActiveScene(value:Scene2D):void {
 
@@ -276,6 +300,18 @@ package de.nulldesign.nd2d.display {
 			if(context3D) {
 				context3D.dispose();
 			}
+		}
+		
+		public function get locked():Boolean
+		{
+			return _locked;
+		}
+		
+		public function set locked(value:Boolean):void
+		{
+			_locked = value;
+			if(!locked && context3D)
+				context3D.present();
 		}
 	}
 }
