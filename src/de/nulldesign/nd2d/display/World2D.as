@@ -31,8 +31,9 @@
 package de.nulldesign.nd2d.display {
 
 	import de.nulldesign.nd2d.utils.StatsObject;
-
+	
 	import flash.display.Sprite;
+	import flash.display.Stage;
 	import flash.display3D.Context3D;
 	import flash.display3D.Context3DCompareMode;
 	import flash.display3D.Context3DTriangleFace;
@@ -81,6 +82,7 @@ package de.nulldesign.nd2d.display {
 		protected var lastFramesTime:Number = 0.0;
 		protected var enableErrorChecking:Boolean = false;
 		protected var _locked:Boolean = false;
+		private var _stage:Stage;
 
 		protected var renderMode:String;
 		protected var mousePosition:Vector3D = new Vector3D(0.0, 0.0, 0.0);
@@ -110,15 +112,35 @@ package de.nulldesign.nd2d.display {
 			addEventListener(Event.ADDED_TO_STAGE, addedToStage);
 		}
 
-		protected function addedToStage(event:Event):void {
-
+		override public function get stage():Stage {
+			var result:Stage;
+			if(super.stage != null){
+				result = super.stage;
+			} else {
+				result = _stage;
+			}
+			return result;
+		}
+		
+		public function set stage(stage:Stage):void {
+			_stage = stage;
+			addedToStage();
+		}
+		
+		protected function addedToStage(event:Event = null):void {
+			
 			removeEventListener(Event.ADDED_TO_STAGE, addedToStage);
 			stage.addEventListener(Event.RESIZE, resizeStage);
 			stage.frameRate = frameRate;
-			stage.stage3Ds[stageID].addEventListener(Event.CONTEXT3D_CREATE, context3DCreated);
-			stage.stage3Ds[stageID].addEventListener(ErrorEvent.ERROR, context3DError);
+			if(stage.stage3Ds[stageID].context3D == null){
+				stage.stage3Ds[stageID].addEventListener(Event.CONTEXT3D_CREATE, context3DCreated);
+				stage.stage3Ds[stageID].addEventListener(ErrorEvent.ERROR, context3DError);
+			} else {
+				//context is already created
+				context3DCreated();
+			}
 			stage.stage3Ds[stageID].requestContext3D(renderMode);
-
+			
 			stage.addEventListener(MouseEvent.CLICK, mouseEventHandler);
 			stage.addEventListener(MouseEvent.MOUSE_DOWN, mouseEventHandler);
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, mouseEventHandler);
@@ -129,27 +151,27 @@ package de.nulldesign.nd2d.display {
 			throw new Error("The SWF is not embedded properly. The 3D context can't be created. Wrong WMODE? Set it to 'direct'.");
 		}
 
-		protected function context3DCreated(e:Event):void {
-
+		protected function context3DCreated(e:Event = null):void {
+			
 			context3D = stage.stage3Ds[stageID].context3D;
 			context3D.enableErrorChecking = enableErrorChecking;
 			context3D.setCulling(Context3DTriangleFace.NONE);
 			context3D.setDepthTest(false, Context3DCompareMode.ALWAYS);
 			isHardwareAccelerated = context3D.driverInfo.toLowerCase().indexOf("software") == -1;
-
+			
 			resizeStage();
-
+			
 			// means we got the Event.CONTEXT3D_CREATE for the second time, the device was lost. reinit everything
 			if(deviceInitialized) {
 				deviceWasLost = true;
 			}
-
+			
 			deviceInitialized = true;
-
+			
 			if(scene) {
 				scene.setStageAndCamRef(stage, camera);
 			}
-
+			
 			dispatchEvent(new Event(Event.INIT));
 		}
 
